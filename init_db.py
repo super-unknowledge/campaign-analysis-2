@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, types
 DATABASE_URL = os.environ["DATABASE_URL"]
 engine = create_engine(DATABASE_URL)
 
-df = pd.read_csv("/data/synthetic_social_media_campaign_data.csv")
+df = pd.read_csv("data/synthetic_social_media_campaign_data.csv")
 
 df["post_date"] = pd.to_datetime(df["post_date"], format="%m/%d/%Y").dt.date
 df["post_time"] = pd.to_datetime(df["post_time"], format="%H:%M").dt.time
