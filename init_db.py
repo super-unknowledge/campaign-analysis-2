@@ -1,7 +1,7 @@
 # init_db.py
 import os
 import pandas as pd
-from sqlalchemy import create_engine, types
+from sqlalchemy import create_engine, text, types
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 engine = create_engine(DATABASE_URL)
@@ -44,4 +44,16 @@ df.to_sql(
     }
 )
 
-print(f"Loaded {len(df)} rows into campaigns table.")
+print(f"✓ Loaded {len(df)} rows into campaigns table.")
+ 
+# ---------------------------------------------------------------------------
+# 2. Create derived-metric views
+# ---------------------------------------------------------------------------
+views_path = os.path.join(os.path.dirname(__file__), "create_views.sql")
+with open(views_path) as f:
+    views_sql = f.read()
+ 
+with engine.begin() as conn:
+    conn.execute(text(views_sql))
+ 
+print("✓ Views created: campaign_metrics, platform_summary.")
