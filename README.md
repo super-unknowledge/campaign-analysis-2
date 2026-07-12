@@ -6,9 +6,6 @@ A Dockerized data pipeline that ingests social media campaign analytics from CSV
 
 NOTE: As of writing, Real World Fake Data datasets are being migrated [here](https://github.com/MBradbourne/real-world-fake-data).
 
-TODO:
-- add sample .env file
-
 ---
 
 ## What it does
