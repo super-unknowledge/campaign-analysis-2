@@ -70,7 +70,21 @@ SELECT
     RANK() OVER (
         PARTITION BY platform
         ORDER BY conversion_value_usd / spend_usd DESC
-    ) AS efficiency_rank
+    ) AS efficiency_rank,
+
+    -- Platform mean ROAS: average ROAS across all campaigns on this platform
+    -- (per-row average, not weighted by spend — matches AVG(roas) in platform_summary)
+    ROUND(
+        AVG(conversion_value_usd / spend_usd) OVER (PARTITION BY platform),
+        4
+    ) AS platform_mean_roas,
+
+    -- Platform ROAS std dev (sample stddev, ddof=1 — matches pandas .std() default)
+    -- NULL for platforms with exactly one campaign; handle in application code
+    ROUND(
+        STDDEV_SAMP(conversion_value_usd / spend_usd) OVER (PARTITION BY platform),
+        4
+    ) AS platform_stddev_roas    
 
 FROM campaigns
 WHERE
