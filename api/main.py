@@ -14,6 +14,7 @@ engine = create_engine(DATABASE_URL)
 app = FastAPI(title="Social Analytics API")
 
 METRICS_QUERY = "SELECT * FROM campaign_metrics"
+SUMMARY_QUERY = "SELECT * FROM platform_summary"
 
 
 # -----------------------------------------------------------------------------
@@ -32,14 +33,33 @@ def _load_platform_enum() -> type[Enum]:
 Platform = _load_platform_enum()
 
 
+class HealthResponse(BaseModel):
+    status: str
+    database: str
+    
+
 class AlertsResponse(BaseModel):
     total_alerts: int
     alerts: list[CampaignAlert]
 
 
-class HealthResponse(BaseModel):
-    status: str
-    database: str
+class PlatformSummary(BaseModel):
+    platform: str
+    total_campaigns: int
+    total_spend_usd: float
+    total_conversion_value_usd: float
+    aggregate_roas: float
+    avg_roas: float
+    avg_cost_per_conversion: float
+    avg_conversion_rate: float
+    avg_ctr: float
+    avg_engagement_rate: float
+    total_impressions: int
+    total_conversions: int
+
+
+class SummaryResponse(BaseModel):
+    platforms: list[PlatformSummary]
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -71,3 +91,20 @@ def get_alerts(
 
     alerts = detect_underperformers(df, bottom_pct=bottom_pct)
     return AlertsResponse(total_alerts=len(alerts), alerts=alerts)
+
+
+@app.get("/summary", response_model=SummaryResponse)
+def get_platform_summary(
+    platform: Platform | None = Query(default=None, description="Filter by platform"),
+):
+    try:
+        with engine.connect() as conn:
+            df = pd.read_sql(text(SUMMARY_QUERY), conn)
+    except OperationalError:
+        raise HTTPException(status_code=503, detail="Database unreachable")
+
+    if platform:
+        df = df[df["platform"] == platform.value]
+
+    records = df.to_dict(orient="records")
+    return SummaryResponse(platforms=[PlatformSummary(**r) for r in records])
