@@ -72,19 +72,16 @@ SELECT
         ORDER BY conversion_value_usd / spend_usd DESC
     ) AS efficiency_rank,
 
-    -- Platform mean ROAS: average ROAS across all campaigns on this platform
-    -- (per-row average, not weighted by spend — matches AVG(roas) in platform_summary)
+-- Platform ROAS percentile rank: this campaign's ROAS position within its
+    -- platform, from 0 (lowest ROAS) to 1 (highest). Robust to the extreme
+    -- right-skew we found in ROAS (a few outlier campaigns break mean/std).
+    -- PERCENT_RANK is 0 for the single lowest row on a platform, so a
+    -- platform with only one campaign always gets 0 here — handled with a
+    -- minimum campaign count in the application layer, not in SQL.
     ROUND(
-        AVG(conversion_value_usd / spend_usd) OVER (PARTITION BY platform),
+        PERCENT_RANK() OVER (PARTITION BY platform ORDER BY conversion_value_usd / spend_usd)::numeric,
         4
-    ) AS platform_mean_roas,
-
-    -- Platform ROAS std dev (sample stddev, ddof=1 — matches pandas .std() default)
-    -- NULL for platforms with exactly one campaign; handle in application code
-    ROUND(
-        STDDEV_SAMP(conversion_value_usd / spend_usd) OVER (PARTITION BY platform),
-        4
-    ) AS platform_stddev_roas    
+    ) AS platform_roas_percentile  
 
 FROM campaigns
 WHERE

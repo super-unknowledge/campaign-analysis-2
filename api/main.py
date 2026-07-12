@@ -55,7 +55,10 @@ def health_check():
 @app.get("/alerts", response_model=AlertsResponse)
 def get_alerts(
     platform: Platform | None = Query(default=None, description="Filter by platform"),
-    threshold: float = Query(default=1.0, ge=0, description="Std deviations below mean"),
+    bottom_pct: float = Query(
+        default=0.02, ge=0, le=1,
+        description="Fraction of lowest-ROAS campaigns per platform to flag (0.02 = bottom 2%)"
+    ),
 ):
     try:
         with engine.connect() as conn:
@@ -66,5 +69,5 @@ def get_alerts(
     if platform:
         df = df[df["platform"] == platform.value]
 
-    alerts = detect_underperformers(df, std_threshold=threshold)
+    alerts = detect_underperformers(df, bottom_pct=bottom_pct)
     return AlertsResponse(total_alerts=len(alerts), alerts=alerts)
